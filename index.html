@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mosey</title>
+<style>
+  :root{--paper:#f6f0e1;--ink:#2b2a22;--moss:#4f6b3a;--moss-d:#37502a;--rust:#b4572e;--line:#d9cfb4}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.5 Georgia,"Times New Roman",serif}
+  main{max-width:640px;margin:0 auto;padding:20px 16px 60px}
+  h1{font-size:2.4rem;margin:.2em 0 0;letter-spacing:-.02em;color:var(--moss-d)}
+  .tag{margin:0 0 18px;color:#6b664f;font-style:italic}
+  fieldset{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:0 0 12px;background:#fbf7ea}
+  legend{padding:0 6px;font:600 .75rem/1 system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#6b664f}
+  label.chip{display:inline-block;margin:3px 4px 3px 0}
+  label.chip input{position:absolute;opacity:0}
+  label.chip span{display:inline-block;padding:6px 13px;border:1px solid var(--line);border-radius:999px;font:.9rem system-ui,sans-serif;cursor:pointer;background:#fff}
+  label.chip input:checked+span{background:var(--moss);border-color:var(--moss);color:#fff}
+  label.chip input:focus-visible+span{outline:2px solid var(--rust);outline-offset:2px}
+  input[type=text],select,textarea{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;background:#fff;color:var(--ink)}
+  button{font:600 1rem system-ui,sans-serif;border:0;border-radius:10px;padding:12px 18px;cursor:pointer;background:var(--moss);color:#fff}
+  button:hover{background:var(--moss-d)}
+  button.ghost{background:transparent;color:var(--moss-d);border:1px solid var(--moss)}
+  button:disabled{opacity:.6;cursor:wait}
+  .status{font:.85rem system-ui,sans-serif;color:#6b664f;margin:6px 0 14px}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:#aaa}
+  .dot.on{background:#4a9a3a}
+  details{margin:0 0 14px;font:.9rem system-ui,sans-serif;color:#6b664f}
+  details input,details select{margin-top:6px}
+  #card{display:none;background:#fffdf5;border:2px solid var(--ink);border-radius:6px;padding:22px 20px;margin-top:16px;position:relative;box-shadow:6px 6px 0 var(--moss)}
+  #card h2{margin:0 0 4px;font-size:1.6rem;line-height:1.2}
+  #card .intro{margin:0 0 14px;font-style:italic;color:#555}
+  #card ul{list-style:none;padding:0;margin:0 0 14px}
+  #card li{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px dashed var(--line)}
+  #card li input{margin-top:6px;width:18px;height:18px;accent-color:var(--moss)}
+  .sense{font:700 .68rem/1 system-ui,sans-serif;text-transform:uppercase;letter-spacing:.09em;color:var(--rust);display:block;margin-bottom:2px}
+  .rule{border:2px solid var(--rust);border-radius:8px;padding:8px 12px;color:var(--rust);font-weight:bold}
+  .closer{margin:14px 0 0;font-style:italic}
+  .actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+  #after{display:none;margin-top:22px}
+  #note{margin-top:12px;padding:14px 16px;border-left:4px solid var(--moss);background:#fbf7ea;white-space:pre-wrap;display:none}
+  #away{display:none;position:fixed;inset:0;background:#000;color:#cfd8c3;z-index:10;text-align:center;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+  #away .big{font:300 4.5rem/1 system-ui,sans-serif;font-variant-numeric:tabular-nums}
+  #away p{max-width:420px;color:#8a937f}
+  #away button{background:#222;color:#aaa;margin-top:30px}
+  footer{margin-top:40px;font:.8rem system-ui,sans-serif;color:#8a8570}
+  @media print{
+    body{background:#fff}main>*:not(#card){display:none!important}
+    #card{display:block!important;box-shadow:none;margin:0}.actions{display:none}
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>Mosey</h1>
+  <p class="tag">Deal yourself a walk. Then put the phone away.</p>
+
+  <fieldset><legend>Time you have</legend>
+    <label class="chip"><input type="radio" name="mins" value="15"><span>15 min</span></label>
+    <label class="chip"><input type="radio" name="mins" value="30" checked><span>30 min</span></label>
+    <label class="chip"><input type="radio" name="mins" value="60"><span>1 hour</span></label>
+  </fieldset>
+  <fieldset><legend>Mood</legend>
+    <label class="chip"><input type="radio" name="vibe" value="calm" checked><span>calm</span></label>
+    <label class="chip"><input type="radio" name="vibe" value="curious"><span>curious</span></label>
+    <label class="chip"><input type="radio" name="vibe" value="energetic"><span>energetic</span></label>
+    <label class="chip"><input type="radio" name="vibe" value="fried from screens"><span>fried from screens</span></label>
+  </fieldset>
+  <fieldset><legend>Where (optional)</legend>
+    <input type="text" id="place" placeholder="e.g. busy city street, small park, campus, village lane">
+  </fieldset>
+
+  <button id="deal">Deal me a walk</button>
+  <div class="status"><span class="dot" id="dot"></span><span id="statusText">Looking for local Gemma…</span></div>
+
+  <details>
+    <summary>Model settings</summary>
+    <label>Ollama URL<input type="text" id="base" value="http://localhost:11434"></label>
+    <label>Model<select id="model"></select></label>
+    <button class="ghost" id="redetect" style="margin-top:8px">Re-detect</button>
+  </details>
+
+  <section id="card" aria-live="polite">
+    <h2 id="cTitle"></h2>
+    <p class="intro" id="cIntro"></p>
+    <ul id="cStops"></ul>
+    <div class="rule" id="cRule"></div>
+    <p class="closer" id="cCloser"></p>
+    <div class="actions">
+      <button id="go">Phone-away mode</button>
+      <button class="ghost" id="print">Print / save card</button>
+      <button class="ghost" id="again">Deal again</button>
+    </div>
+  </section>
+
+  <section id="after">
+    <h3>Back already? Jot a few words.</h3>
+    <textarea id="notes" rows="3" placeholder="a crow stealing a samosa, the smell of rain on hot road, my neighbour's marigolds…"></textarea>
+    <div class="actions"><button id="stamp">Write my field note</button></div>
+    <div id="note"></div>
+  </section>
+
+  <footer>Mosey runs on an open-weight model (Gemma) on your own machine through Ollama. No account, no server, no tracking. If no local model is found it falls back to a hand-written deck.</footer>
+</main>
+
+<div id="away" role="dialog" aria-label="Phone-away mode">
+  <div class="big" id="clock">00:00</div>
+  <p>Phone in your pocket. Eyes up. Your card is on your phone or in your hand. Come back when the timer ends, or sooner if you feel like it.</p>
+  <button id="back">I'm back</button>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const val = n => document.querySelector(`input[name=${n}]:checked`).value;
+let models = [], gemmaOK = false, current = null, timer = null;
+
+/* ---------- local Gemma detection ---------- */
+async function detect() {
+  const base = $('#base').value.replace(/\/$/, '');
+  $('#statusText').textContent = 'Looking for local Gemma…';
+  try {
+    const r = await fetch(base + '/api/tags', { signal: AbortSignal.timeout(2500) });
+    const j = await r.json();
+    models = (j.models || []).map(m => m.name);
+    const sel = $('#model'); sel.innerHTML = '';
+    models.forEach(m => sel.add(new Option(m, m)));
+    const g = models.find(m => /gemma/i.test(m));
+    if (g) sel.value = g;
+    gemmaOK = models.length > 0;
+    $('#dot').className = 'dot' + (gemmaOK ? ' on' : '');
+    $('#statusText').textContent = gemmaOK
+      ? (g ? `Local Gemma ready: ${g}` : `Ollama found, but no Gemma model. Using ${models[0]}.`)
+      : 'Ollama is running but has no models. Using the built-in deck.';
+  } catch (e) {
+    gemmaOK = false;
+    $('#dot').className = 'dot';
+    $('#statusText').textContent = 'No local Ollama found. Using the built-in deck (works offline too).';
+  }
+}
+
+/* ---------- prompt ---------- */
+function buildPrompt(mins, vibe, place) {
+  const d = new Date();
+  const when = d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+  const h = d.getHours();
+  const tod = h < 5 ? 'night' : h < 12 ? 'morning' : h < 17 ? 'afternoon' : h < 20 ? 'evening' : 'night';
+  const n = mins <= 15 ? 4 : mins <= 30 ? 5 : 6;
+  return `You design tiny "screen-free walk cards" for someone who has been staring at screens.
+Context: it is ${tod} on ${when}. They have ${mins} minutes. Mood: ${vibe}. Place: ${place || 'wherever they are, unknown'}.
+Write ONE card as JSON only, with exactly this shape:
+{"title": "3-5 word playful title",
+ "intro": "one short sentence setting the scene",
+ "stops": [{"sense": "look|listen|touch|smell|do|wonder", "text": "one concrete, specific task, max 18 words"}],
+ "rule": "one short phone rule for this walk",
+ "closer": "one reflective question to carry home"}
+Requirements: exactly ${n} stops, each with a DIFFERENT sense. Tasks must need no equipment, no money and no screen, must be safe, must not involve trespassing, and must fit the season, time of day and place. Prefer odd, specific noticing tasks over generic advice ("find three different shades of green" beats "enjoy nature"). Match the mood. Output JSON only.`;
+}
+
+/* ---------- Gemma call ---------- */
+async function askGemma(prompt, asJson) {
+  const base = $('#base').value.replace(/\/$/, '');
+  const r = await fetch(base + '/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    signal: AbortSignal.timeout(120000),
+    body: JSON.stringify({
+      model: $('#model').value,
+      stream: false,
+      ...(asJson ? { format: 'json' } : {}),
+      options: { temperature: 0.9 },
+      messages: [{ role: 'user', content: prompt }]
+    })
+  });
+  if (!r.ok) throw new Error('Ollama returned ' + r.status);
+  const j = await r.json();
+  return j.message.content;
+}
+function parseCard(txt) {
+  const m = txt.match(/\{[\s\S]*\}/);
+  const c = JSON.parse(m ? m[0] : txt);
+  if (!c.title || !Array.isArray(c.stops) || c.stops.length < 3) throw new Error('bad card');
+  c.stops = c.stops.filter(s => s && s.text).map(s => ({ sense: String(s.sense || 'do').toLowerCase(), text: String(s.text) }));
+  return c;
+}
+
+/* ---------- offline fallback deck ---------- */
+const DECK = {
+  look: ['Find three different shades of green and decide which one is the winner.', 'Spot something that was built a long time ago and is still being used.', 'Find a tiny living thing you would normally walk past.', 'Look up. Find the highest thing you can see and the lowest sky gap.', 'Find a shadow with an interesting shape and follow it for ten steps.'],
+  listen: ['Stop for one minute. Count how many separate sounds you can hear.', 'Find the quietest spot on your route and stay there for ten breaths.', 'Listen for a bird, then try to spot it.', 'Pick one far-off sound and one close sound. Which one is louder in your head?'],
+  touch: ['Touch three different surfaces and rank them from rough to smooth.', 'Find a leaf, bark or wall that feels cool and one that feels warm.', 'Let your hand trail along something for a few steps, safely.'],
+  smell: ['Find the best smell on your route. Describe it in three words.', 'Stop and smell something green: a leaf, a flower, damp earth.', 'Notice how the air smells different in two spots.'],
+  do: ['Take a different turn than you normally would, once.', 'Say good morning (or hello) to one person or animal.', 'Walk five minutes slower than feels natural.', 'Pick up one small thing worth keeping, like a leaf or a pebble. Leave the rest.'],
+  wonder: ['Who walked here before you today? Make up one story from the clues.', 'Pick a tree or building. Guess how old it is. Then guess its worst day.', 'What would this exact spot look like in a different season?']
+};
+const TITLES = { 'calm': ['Slow Lane Notes', 'Soft Footsteps', 'Unhurried Loop'], 'curious': ['Detail Hunt', 'The Noticing Walk', 'Odd Little Finds'], 'energetic': ['Brisk and Observant', 'Footloose Field Trip', 'Quick Quest'], 'fried from screens': ['Eyes Out, Screen Off', 'Screen Detox Stroll', 'Unplug and Wander'] };
+const RULES = ['Phone stays in your pocket until you are back.', 'Phone on silent. One photo allowed, max.', 'No phone at all. Memory only.'];
+const CLOSERS = ['What is one thing you noticed that you would normally miss?', 'What did you not notice until you slowed down?', 'Which stop would you do again tomorrow?'];
+const pick = a => a[Math.floor(Math.random() * a.length)];
+function fallbackCard(mins, vibe) {
+  const n = mins <= 15 ? 4 : mins <= 30 ? 5 : 6;
+  const senses = Object.keys(DECK).sort(() => Math.random() - .5).slice(0, n);
+  return {
+    title: pick(TITLES[vibe] || TITLES.curious), intro: `${mins} minutes. No destination needed.`,
+    stops: senses.map(s => ({ sense: s, text: pick(DECK[s]) })), rule: pick(RULES), closer: pick(CLOSERS)
+  };
+}
+
+/* ---------- render ---------- */
+function render(c, source) {
+  current = c;
+  $('#cTitle').textContent = c.title;
+  $('#cIntro').textContent = (c.intro || '') + (source ? '' : '');
+  const ul = $('#cStops'); ul.innerHTML = '';
+  c.stops.forEach(s => {
+    const li = document.createElement('li');
+    const cb = document.createElement('input'); cb.type = 'checkbox';
+    const d = document.createElement('div');
+    const k = document.createElement('span'); k.className = 'sense'; k.textContent = s.sense;
+    d.append(k, document.createTextNode(s.text));
+    li.append(cb, d); ul.append(li);
+  });
+  $('#cRule').textContent = 'Rule: ' + (c.rule || RULES[0]);
+  $('#cCloser').textContent = c.closer || '';
+  $('#card').style.display = 'block';
+  $('#after').style.display = 'block';
+  $('#note').style.display = 'none';
+  $('#card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function deal() {
+  const mins = +val('mins'), vibe = val('vibe'), place = $('#place').value.trim();
+  const btn = $('#deal'); btn.disabled = true; btn.textContent = 'Shuffling the deck…';
+  let card, used = 'deck';
+  if (gemmaOK) {
+    try { card = parseCard(await askGemma(buildPrompt(mins, vibe, place), true)); used = 'gemma'; }
+    catch (e) { console.warn(e); $('#statusText').textContent = 'Gemma had a hiccup, so this card is from the built-in deck.'; }
+  }
+  if (!card) card = fallbackCard(mins, vibe);
+  render(card, used);
+  if (used === 'gemma') $('#statusText').textContent = `Card written by ${$('#model').value} on your machine.`;
+  btn.disabled = false; btn.textContent = 'Deal me a walk';
+}
+
+/* ---------- phone-away timer ---------- */
+function startAway() {
+  let left = +val('mins') * 60;
+  const show = () => { $('#clock').textContent = String(Math.floor(left / 60)).padStart(2, '0') + ':' + String(left % 60).padStart(2, '0'); };
+  show(); $('#away').style.display = 'flex';
+  timer = setInterval(() => { left--; show(); if (left <= 0) { clearInterval(timer); $('#clock').textContent = 'Done'; if (navigator.vibrate) navigator.vibrate([200, 100, 200]); } }, 1000);
+}
+function endAway() { clearInterval(timer); $('#away').style.display = 'none'; $('#after').scrollIntoView({ behavior: 'smooth' }); }
+
+/* ---------- field note ---------- */
+async function stamp() {
+  const notes = $('#notes').value.trim();
+  if (!notes) { $('#notes').focus(); return; }
+  const box = $('#note'); box.style.display = 'block'; box.textContent = 'Writing…';
+  const done = current ? current.stops.map(s => s.text) : [];
+  const p = `Turn these rough notes from a short outdoor walk into a field-journal entry of 3 to 4 sentences, first person, warm and a little funny. Use only details from the notes; do not invent events. End with a one-line "Noticed:" summary.\nCard title: ${current ? current.title : 'Walk'}\nNotes: ${notes}`;
+  try {
+    if (!gemmaOK) throw new Error('offline');
+    box.textContent = (await askGemma(p, false)).trim();
+  } catch (e) {
+    box.textContent = `${new Date().toLocaleDateString()}: ${notes}\nNoticed: ${notes.split(/[,.;]/)[0].trim()}.\n(Start Ollama with a Gemma model for a written entry.)`;
+  }
+}
+
+/* ---------- wire up ---------- */
+$('#deal').onclick = deal; $('#again').onclick = deal;
+$('#go').onclick = startAway; $('#back').onclick = endAway;
+$('#print').onclick = () => window.print();
+$('#stamp').onclick = stamp; $('#redetect').onclick = detect;
+detect();
+</script>
+</body>
+</html>
